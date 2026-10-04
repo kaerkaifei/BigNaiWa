@@ -1444,6 +1444,16 @@
   bindSizeBtn('zoomIn', () => setPageZoom(pageZoom + ZOOM_STEP));
   paintSizeUi();
 
+  /* 调试/测试钩子:控制台里 window.__danaiwa() 看内部状态(只读) */
+  window.__danaiwa = () => ({
+    w: Math.round(W), h: Math.round(H),
+    ready: state.ready, over: state.over, pending: state.pending, next: state.next,
+    balls: state.balls.length,
+    sample: state.balls.slice(0, 4).map(b => [Math.round(b.x), Math.round(b.y),
+      Number.isNaN(b.x) ? 'NaN' : 'ok']),
+    autoDrop: state.autoDrop, freeze: state.freeze
+  });
+
   /* 新功能提醒：只出现一次（记录在 localStorage，点“知道了”或超时都会记下） */
   const sizeTip = document.getElementById('sizeTip');
   const TIP_KEY = 'danaiwa.sizetip.v1';
