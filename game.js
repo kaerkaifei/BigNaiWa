@@ -1427,8 +1427,13 @@
   function setPageZoom(z) {
     pageZoom = clamp(Math.round(z * 10) / 10, ZOOM_MIN, ZOOM_MAX);
     document.body.style.zoom = pageZoom === 1 ? '' : String(pageZoom);
-    /* 放大后页面比窗口宽：允许滚动平移看全面板，100% 时恢复禁止滚动 */
-    document.body.style.overflow = pageZoom === 1 ? '' : 'auto';
+    /* 放大后页面比窗口宽：允许滚动平移看全面板，100% 时恢复禁止滚动并归位 */
+    if (pageZoom === 1) {
+      document.body.style.overflow = '';
+      window.scrollTo(0, 0);
+    } else {
+      document.body.style.overflow = 'auto';
+    }
     paintSizeUi();
   }
 
