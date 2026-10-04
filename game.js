@@ -13,27 +13,35 @@
    *  常量
    * ------------------------------------------------------- */
 
-  /* 区域范围改版：长度翻倍（700 → 1400）且高度可滚动，宽度拉满。
-     水果保持原始大小 —— 世界坐标 1:1 渲染（缩放恒为 1）：
-     W = 舞台可用宽度（面板以外的全部），H 固定 1400；
-     井底超出一屏，用滚轮 / 触屏上下滑动棋盘查看。 */
-  const H = 1400;            // 逻辑高度（原版 700 的两倍），棋盘内滚动
-  /* 开局先锁舞台宽度（拉满）、锁画布高度（触发滚动条），
-     再读「扣掉滚动条之后」的画布净宽当作世界宽度 —— 保证水果 1:1 渲染。
-     窗口尺寸变化后刷新页面即可重新适配。 */
+  /* 区域范围改版：棋盘大小可调 —— 最小为原版 420 × 700，宽度上限拉满窗口，高度上限 3000。
+     水果保持原始大小 —— 世界坐标 1:1 渲染；「棋盘大小」按钮在游戏中实时改 W/H。 */
+  const W_MIN = 420;         // 宽度下限 = 原版
+  const H_MIN = 700;         // 高度下限 = 原版
+  const H_MAX = 3000;        // 高度上限
   const __stage = document.getElementById('stage');
   const __canvas = document.getElementById('game');
   const __stageW = __stage.getBoundingClientRect().width;
-  if (__stageW > 1) {
+  const W_MAX = __stageW > 1 ? Math.floor(__stageW) : W_MIN;  // 宽度上限 = 拉满窗口
+  let W = W_MAX;             // 默认宽度拉满
+  let H = 1400;              // 默认深度 = 原版两倍
+  let SB = 0;                // 棋盘滚动条占宽（锁定 1:1 需要补偿）
+
+  function applyBoardSize() {
     __stage.style.flex = '0 0 auto';
-    __stage.style.width = Math.round(__stageW) + 'px';
+    __stage.style.width = Math.round(W + SB) + 'px';
     __stage.style.maxWidth = '100%';   // 保险：窗口比开局时窄，宁可轻微缩放也不横向溢出
-    __canvas.style.height = H + 'px';
+    __canvas.style.height = Math.round(H) + 'px';
   }
-  const __canvasW = __canvas.getBoundingClientRect().width;
-  const W = __canvasW > 1
-    ? Math.max(300, Math.round(__canvasW))   // 宽度拉满，1:1 不缩放
-    : 420;                                   // 量不到时退回原版宽度
+
+  if (__stageW > 1) {
+    applyBoardSize();
+    const __cW = __canvas.getBoundingClientRect().width;
+    SB = Math.max(0, Math.round(__stage.clientWidth - __cW));
+    W = Math.max(W_MIN, Math.round(__cW));   // 世界宽 = 扣掉滚动条后的画布净宽，1:1
+    applyBoardSize();
+  } else {
+    W = W_MIN;
+  }
   const WALL = 10;           // 左右墙厚
   const DROP_Y = 74;         // 待投放水果的高度
   const DANGER_Y = 142;      // 警戒线
@@ -1380,6 +1388,77 @@
       /* 正在自动投放时改速度：拍子立刻跟上新的间隔 */
       if (state.autoDrop) state.autoTimer = Math.min(state.autoTimer, autoInterval / 1000);
     });
+  }
+
+  /* —— 棋盘大小 / 页面缩放 —— 尺寸下限为原版 420 × 700 */
+  const sizeValEl = document.getElementById('sizeVal');
+  const ZOOM_MIN = 0.6, ZOOM_MAX = 1.8, ZOOM_STEP = 0.1;
+  let pageZoom = 1;
+
+  function paintSizeUi() {
+    if (sizeValEl) {
+      sizeValEl.textContent =
+        Math.round(W) + ' × ' + Math.round(H) + ' · ' + Math.round(pageZoom * 100) + '%';
+    }
+  }
+
+  /* 缩小棋盘时把水果收回新边界里，别悬在墙外 / 地板下 */
+  function clampBallsToBounds() {
+    for (let i = 0; i < state.balls.length; i++) {
+      const b = state.balls[i];
+      if (b.dead) continue;
+      const lo = WALL + b.r, hi = W - WALL - b.r;
+      if (b.x < lo || b.x > hi) { b.x = clamp(b.x, lo, hi); b.vx = 0; }
+      if (b.y + b.r > H) { b.y = H - b.r; if (b.vy > 0) b.vy = 0; }
+      b.overTime = 0;   // 别因为“搬家”直接判负
+    }
+  }
+
+  function resizeBoard(dw, dh) {
+    W = clamp(W + dw, W_MIN, W_MAX);
+    H = clamp(H + dh, H_MIN, H_MAX);
+    applyBoardSize();
+    state.aimX = clamp(state.aimX, WALL, W);
+    clampBallsToBounds();
+    resizeCanvas();
+    paintSizeUi();
+  }
+
+  function setPageZoom(z) {
+    pageZoom = clamp(Math.round(z * 10) / 10, ZOOM_MIN, ZOOM_MAX);
+    document.body.style.zoom = pageZoom === 1 ? '' : String(pageZoom);
+    /* 放大后页面比窗口宽：允许滚动平移看全面板，100% 时恢复禁止滚动 */
+    document.body.style.overflow = pageZoom === 1 ? '' : 'auto';
+    paintSizeUi();
+  }
+
+  const bindSizeBtn = (id, fn) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('click', (e) => { fn(); e.currentTarget.blur(); });
+  };
+  bindSizeBtn('wMinus', () => resizeBoard(-60, 0));
+  bindSizeBtn('wPlus', () => resizeBoard(60, 0));
+  bindSizeBtn('hMinus', () => resizeBoard(0, -100));
+  bindSizeBtn('hPlus', () => resizeBoard(0, 100));
+  bindSizeBtn('zoomOut', () => setPageZoom(pageZoom - ZOOM_STEP));
+  bindSizeBtn('zoomIn', () => setPageZoom(pageZoom + ZOOM_STEP));
+  paintSizeUi();
+
+  /* 新功能提醒：只出现一次（记录在 localStorage，点“知道了”或超时都会记下） */
+  const sizeTip = document.getElementById('sizeTip');
+  const TIP_KEY = 'danaiwa.sizetip.v1';
+  if (sizeTip && !localStorage.getItem(TIP_KEY)) {
+    sizeTip.hidden = false;
+    let tipDone = false;
+    const hideTip = () => {
+      if (tipDone) return;
+      tipDone = true;
+      sizeTip.hidden = true;
+      try { localStorage.setItem(TIP_KEY, '1'); } catch (err) { /* 隐私模式等场景忽略 */ }
+    };
+    const tipOk = document.getElementById('sizeTipOk');
+    if (tipOk) tipOk.addEventListener('click', hideTip);
+    setTimeout(hideTip, 12000);
   }
 
   resetBtn.addEventListener('click', reset);

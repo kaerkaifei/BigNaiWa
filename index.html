@@ -25,6 +25,12 @@
       <canvas id="game" aria-label="合成大奶娃游戏区域"></canvas>
     </div>
 
+    <!-- 新功能提醒：只在第一次玩的时候出现一次 -->
+    <div class="size-tip" id="sizeTip" hidden>
+      <span>💡 「自动释放」可以自动连投铺场；「棋盘大小」能加大 / 缩小棋盘和页面（最小为原版 420 × 700）</span>
+      <button class="link-btn" id="sizeTipOk" type="button">知道了</button>
+    </div>
+
     <!-- 复活币：浮在棋盘左上角。
          刻意不放进顶部信息条 —— 手机上面板是横向 flex，
          多一个卡片会把「分数 / 最高分」挤到 52px 宽还折行（实测面板从 66px 涨到 102px）。
@@ -104,6 +110,28 @@
       <span class="box-label">合成表</span>
       <canvas id="chain" width="680" height="112" aria-label="合成顺序"></canvas>
       <p class="chain-note">✨ 两个神奶蛙撞在一起会一起炸掉，换 <strong>500 分</strong> + <strong>一枚复活币</strong></p>
+    </div>
+
+    <div class="size-box">
+      <span class="box-label">棋盘大小</span>
+      <div class="size-rows">
+        <div class="size-row">
+          <span class="size-k">宽</span>
+          <button class="btn size-btn" id="wMinus" type="button" title="宽度 −60（最小 420 = 原版）">−</button>
+          <button class="btn size-btn" id="wPlus" type="button" title="宽度 +60（最大 = 窗口拉满）">＋</button>
+        </div>
+        <div class="size-row">
+          <span class="size-k">高</span>
+          <button class="btn size-btn" id="hMinus" type="button" title="高度 −100（最小 700 = 原版）">−</button>
+          <button class="btn size-btn" id="hPlus" type="button" title="高度 +100（最大 3000）">＋</button>
+        </div>
+        <div class="size-row">
+          <span class="size-k">缩放</span>
+          <button class="btn size-btn" id="zoomOut" type="button" title="整个页面缩小 10%">−</button>
+          <button class="btn size-btn" id="zoomIn" type="button" title="整个页面放大 10%">＋</button>
+        </div>
+      </div>
+      <span class="size-val" id="sizeVal"></span>
     </div>
 
     <div class="actions">
