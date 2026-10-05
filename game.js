@@ -13,25 +13,35 @@
    *  常量
    * ------------------------------------------------------- */
 
-  /* 区域范围改版：棋盘大小可调 —— 最小为原版 420 × 700，宽度上限拉满窗口，高度上限 3000。
-     水果保持原始大小 —— 世界坐标 1:1 渲染；「棋盘大小」按钮在游戏中实时改 W/H。 */
+  /* 区域范围改版：棋盘大小可调 —— 最小为原版 420 × 700；桌面宽度上限拉满窗口，
+     手机宽度上限 1600（超出屏幕的部分在棋盘容器里左右平移查看）；高度上限 3000。
+     水果保持原始大小 —— 画布永远按世界尺寸 1:1 渲染；「棋盘大小」按钮实时改 W/H。 */
   const W_MIN = 420;         // 宽度下限 = 原版
   const H_MIN = 700;         // 高度下限 = 原版
   const H_MAX = 3000;        // 高度上限
+  const W_MAX_MOBILE = 1600; // 手机宽度上限（超出屏幕的部分左右平移查看）
+  const PX_BUDGET = 3200000; // 画布布局像素预算（dpr≤2 → 设备像素 ≈ 12.8M，主流机型都吃得下）
   const __stage = document.getElementById('stage');
   const __canvas = document.getElementById('game');
+  const __vp = document.getElementById('boardViewport');
   const __stageW = __stage.getBoundingClientRect().width;
-  const W_MAX = __stageW > 1 ? Math.floor(__stageW) : W_MIN;  // 宽度上限 = 拉满窗口
-  let W = W_MAX;             // 默认宽度拉满
+  let W = __stageW > 1 ? Math.floor(__stageW) : W_MIN;  // 先按拉满占位，量完再校准
   let H = 1400;              // 默认深度 = 原版两倍
-  let SB = 0;                // 棋盘滚动条占宽（锁定 1:1 需要补偿）
+  let SB = 0;                // 棋盘滚动条占宽（桌面锁定 1:1 需要补偿）
 
   const mobileMq = window.matchMedia('(max-width: 860px)');
   function applyBoardSize() {
-    /* 手机：高度交给弹性布局分配（宽度仍锁 1:1）；桌面：宽高都锁死 */
-    __stage.style.flex = mobileMq.matches ? '1 1 auto' : '0 0 auto';
-    __stage.style.width = Math.round(W + SB) + 'px';
-    __stage.style.maxWidth = '100%';   // 保险：窗口比开局时窄，宁可轻微缩放也不横向溢出
+    /* 画布按世界尺寸渲染；舞台/容器只是「窗口」：
+       桌面 = 舞台拉满窗口（锁宽并补偿滚动条）；手机 = 舞台即屏宽，画布溢出容器内平移 */
+    if (mobileMq.matches) {
+      __stage.style.flex = '1 1 auto';
+      __stage.style.width = '';
+      __canvas.style.width = Math.round(W) + 'px';
+    } else {
+      __stage.style.flex = '0 0 auto';
+      __stage.style.width = Math.round(W + SB) + 'px';
+      __canvas.style.width = Math.round(W) + 'px';
+    }
     __canvas.style.height = Math.round(H) + 'px';
   }
   const onMqFlip = () => { applyBoardSize(); if (typeof resizeCanvas === 'function') resizeCanvas(); };
@@ -40,13 +50,17 @@
 
   if (__stageW > 1) {
     applyBoardSize();
-    const __cW = __canvas.getBoundingClientRect().width;
-    SB = Math.max(0, Math.round(__stage.clientWidth - __cW));
-    W = Math.max(W_MIN, Math.round(__cW));   // 世界宽 = 扣掉滚动条后的画布净宽，1:1
+    SB = Math.max(0, __vp.offsetWidth - __vp.clientWidth);   // 滚动条占宽
+    const __cW = Math.round(__canvas.getBoundingClientRect().width);
+    W = mobileMq.matches
+      ? Math.max(W_MIN, Math.round(__stageW))                // 手机初始 = 屏宽（不低于原版 420）
+      : Math.max(W_MIN, __cW - SB);                          // 桌面初始 = 拉满
     applyBoardSize();
   } else {
     W = W_MIN;
   }
+  const W_MAX_DESKTOP = Math.max(W_MIN, Math.floor(__stageW) - SB);  // 桌面宽度上限 = 拉满窗口
+  const wMax = () => (mobileMq.matches ? W_MAX_MOBILE : W_MAX_DESKTOP);
   const WALL = 10;           // 左右墙厚
   const DROP_Y = 74;         // 待投放水果的高度
   const DANGER_Y = 142;      // 警戒线
@@ -1282,7 +1296,7 @@
   /* 手动投放后回到顶部：吊着的水果、「下一个」和落点指示都在最上面。
      自动释放不触发，免得跟用户正在往下翻看井底打架。 */
   function scrollBoardTop() {
-    if (boardViewport) boardViewport.scrollTo({ top: 0, behavior: 'smooth' });
+    if (boardViewport) boardViewport.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }
 
   /* 触屏是「拖动瞄准、松手投放」——手指不会挡住落点，也方便微调；
@@ -1420,8 +1434,13 @@
   }
 
   function resizeBoard(dw, dh) {
-    W = clamp(W + dw, W_MIN, W_MAX);
+    W = clamp(W + dw, W_MIN, wMax());
     H = clamp(H + dh, H_MIN, H_MAX);
+    /* 画布像素预算：一个方向加满时，另一个方向自动让路，避免超大画布在手机上爆内存 */
+    if (W * H > PX_BUDGET) {
+      if (dw > 0) W = Math.max(W_MIN, Math.floor(PX_BUDGET / H));
+      else H = Math.max(H_MIN, Math.floor(PX_BUDGET / W));
+    }
     applyBoardSize();
     state.aimX = clamp(state.aimX, WALL, W);
     clampBallsToBounds();

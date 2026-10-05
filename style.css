@@ -94,16 +94,16 @@ body {
 #game {
   display: block;
   width: 100%;
-  height: auto;   /* 高度由 game.js 锁成世界高度（1400px），在 .board-viewport 里滚动 */
+  height: auto;   /* 高度由 game.js 锁成世界高度，在 .board-viewport 里滚动 */
 }
 
-/* 棋盘滚动容器：世界 1:1 渲染后比一屏高，竖向滑动查看井底 */
+/* 棋盘滚动容器：世界 1:1 渲染后可大于一屏（井深翻倍 + 宽度可调），
+   上下左右都能平移查看 */
 .board-viewport {
   position: absolute;
   inset: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  touch-action: pan-y;              /* 触屏：竖滑看井底，横拖照样瞄准 */
+  overflow: auto;
+  touch-action: pan-x pan-y;        /* 触屏：拖动平移视野，点哪投哪 */
   overscroll-behavior: contain;     /* 滑到头别把页面带着跑 */
   scrollbar-width: thin;
   scrollbar-color: rgba(180, 130, 80, .45) transparent;
@@ -961,8 +961,6 @@ body {
   }
 
   .size-box.open .box-label::after { content: "收起 ▴"; }
-
-  .size-row-w { display: none; }
 
   .size-box .size-rows,
   .size-box .size-val { display: none; }
