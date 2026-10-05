@@ -1462,6 +1462,15 @@
   bindSizeBtn('zoomIn', () => setPageZoom(pageZoom + ZOOM_STEP));
   paintSizeUi();
 
+  /* 手机端：尺寸卡默认收起，点「棋盘尺寸」标题展开 / 收起（桌面端常开） */
+  const sizeBoxEl = document.querySelector('.size-box');
+  if (sizeBoxEl) {
+    const sizeLabel = sizeBoxEl.querySelector('.box-label');
+    if (sizeLabel) sizeLabel.addEventListener('click', () => {
+      if (mobileMq.matches) sizeBoxEl.classList.toggle('open');
+    });
+  }
+
   /* 调试/测试钩子:控制台里 window.__danaiwa() 看内部状态(只读) */
   window.__danaiwa = () => ({
     w: Math.round(W), h: Math.round(H),

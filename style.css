@@ -185,6 +185,8 @@ body {
   pointer-events: auto;
 }
 
+.only-mobile { display: none; }   /* 只在手机提醒文案里显示，见 ≤860px 媒体查询 */
+
 /* ---------------- 结束遮罩 ---------------- */
 
 .overlay {
@@ -876,8 +878,7 @@ body {
   .panel-head,
   .next-box,
   .chain-box,
-  .size-box,
-  .tips { display: none; }
+  .tips { display: none; }   /* .size-box 不再隐藏：手机上收起为一条「棋盘尺寸」 */
 
   .stats {
     flex: 1 1 auto;
@@ -938,6 +939,38 @@ body {
   #boardBtn .lbl,
   #soundBtn .lbl,
   #autoBtn .lbl { display: none; }
+
+  /* 棋盘尺寸：手机上做成折叠卡（默认收起，点标题展开）。
+     去掉「宽」行 —— 手机宽度就是屏宽；保留「高」和「缩放」。 */
+  .size-box {
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+
+  .size-box .box-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .size-box .box-label::after {
+    content: "展开 ▾";
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .size-box.open .box-label::after { content: "收起 ▴"; }
+
+  .size-row-w { display: none; }
+
+  .size-box .size-rows,
+  .size-box .size-val { display: none; }
+
+  .size-box.open .size-rows { display: flex; }
+  .size-box.open .size-val { display: block; }
+
+  .only-mobile { display: inline; }
 
   /* 提醒条：往下挪一点避开窄顶栏，文案里的桌面按钮说明（.only-desktop）不显示 */
   .size-tip {
