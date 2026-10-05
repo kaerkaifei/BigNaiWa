@@ -49,6 +49,7 @@ body {
     #fff9f1;
   display: grid;
   grid-template-columns: minmax(0, 1fr);  /* 轨道钉在容器宽：内容再宽也不许把页面撑横向溢出 */
+  grid-template-rows: minmax(0, 1fr);     /* 行高钉在容器高：手机端 .app 弹性分高才有基准 */
   place-items: center;
   overflow: hidden;
   touch-action: manipulation;          /* 干掉双击缩放 */
@@ -846,21 +847,24 @@ body {
   /* 面板是 DOM 里靠后的，用 order 提到棋盘上面 */
   .panel { order: -1; }
 
-  /* 棋盘：宽度拉满整个屏宽，高度吃掉信息条以外的全部剩余高度；
-     margin:auto 让它在剩下的空间里垂直居中 */
+  /* 棋盘：弹性吃掉信息条以外的全部高度（不再用 --topbar 猜测值硬算），
+     宽度拉满整个屏宽 */
   .stage {
-    margin: auto 0;
-    width: 100%;               /* 区域改版：手机上同样宽度拉满 */
-    height: calc(var(--vh) - var(--topbar) - 28px - var(--safe-t) - var(--safe-b));
+    margin: 0;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    height: auto;
     max-height: none;
     border-radius: 20px;
   }
 
-  /* ---- 顶部信息条 ---- */
+  /* ---- 顶部信息条 ----
+     两行布局：第一行分数，第二行全部按钮整行摊开，不再互相挤压换行 */
   .panel {
-    flex-direction: row;
+    flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
     max-width: none;           /* 区域改版：信息条跟棋盘一样拉满 */
     padding: 8px 10px;
@@ -902,7 +906,16 @@ body {
   .actions {
     flex: 0 0 auto;
     display: flex;
+    flex-wrap: nowrap;         /* 五个控件永远一行，整行摊开 */
     gap: 6px;
+    width: 100%;
+  }
+
+  .actions .btn,
+  .actions .auto-speed {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 4px;
   }
 
   /* 触摸目标够大，别让人点不中 */
@@ -925,6 +938,15 @@ body {
   #boardBtn .lbl,
   #soundBtn .lbl,
   #autoBtn .lbl { display: none; }
+
+  /* 提醒条：往下挪一点避开窄顶栏，文案里的桌面按钮说明（.only-desktop）不显示 */
+  .size-tip {
+    top: 176px;
+    max-width: 92%;
+    font-size: 12px;
+  }
+
+  .only-desktop { display: none; }
 
   #boardBtn, #soundBtn {
     min-width: 46px;

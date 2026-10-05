@@ -26,12 +26,17 @@
   let H = 1400;              // 默认深度 = 原版两倍
   let SB = 0;                // 棋盘滚动条占宽（锁定 1:1 需要补偿）
 
+  const mobileMq = window.matchMedia('(max-width: 860px)');
   function applyBoardSize() {
-    __stage.style.flex = '0 0 auto';
+    /* 手机：高度交给弹性布局分配（宽度仍锁 1:1）；桌面：宽高都锁死 */
+    __stage.style.flex = mobileMq.matches ? '1 1 auto' : '0 0 auto';
     __stage.style.width = Math.round(W + SB) + 'px';
     __stage.style.maxWidth = '100%';   // 保险：窗口比开局时窄，宁可轻微缩放也不横向溢出
     __canvas.style.height = Math.round(H) + 'px';
   }
+  const onMqFlip = () => { applyBoardSize(); if (typeof resizeCanvas === 'function') resizeCanvas(); };
+  try { mobileMq.addEventListener('change', onMqFlip); }
+  catch (err) { try { mobileMq.addListener(onMqFlip); } catch (err2) { /* 太老就忽略 */ } }
 
   if (__stageW > 1) {
     applyBoardSize();
@@ -1445,6 +1450,14 @@
   bindSizeBtn('wPlus', () => resizeBoard(60, 0));
   bindSizeBtn('hMinus', () => resizeBoard(0, -100));
   bindSizeBtn('hPlus', () => resizeBoard(0, 100));
+  /* 老 iOS Safari 不支持 CSS zoom —— 不支持就禁用两个按钮，别让玩家点了没反应 */
+  const zoomSupported = typeof CSS !== 'undefined' && CSS.supports && CSS.supports('zoom', '1.2');
+  if (!zoomSupported) {
+    for (const id of ['zoomOut', 'zoomIn']) {
+      const el = document.getElementById(id);
+      if (el) { el.disabled = true; el.title = '当前浏览器不支持页面缩放'; el.style.opacity = '.45'; }
+    }
+  }
   bindSizeBtn('zoomOut', () => setPageZoom(pageZoom - ZOOM_STEP));
   bindSizeBtn('zoomIn', () => setPageZoom(pageZoom + ZOOM_STEP));
   paintSizeUi();
